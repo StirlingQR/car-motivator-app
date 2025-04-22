@@ -67,6 +67,56 @@ CARS = {
     """
 }
 
+def show_car_animation(car_svg, one_time=False):
+    """Shows a car animation with the given SVG"""
+    animation_code = f"""
+    <div id="car-container" style="position: fixed; top: {random.randint(20, 70)}%; left: -200px; z-index: 9999;">
+        <div style="width: 200px; height: 100px;">
+            {car_svg}
+        </div>
+    </div>
+    
+    <script>
+        // Log the animation parameters for debugging
+        console.log("Animation started, one_time={str(one_time).lower()}");
+        
+        // Animate car across screen
+        const car = document.getElementById('car-container');
+        let position = -200;
+        const screenWidth = window.innerWidth;
+        
+        function moveCar() {{
+            position += 5;
+            car.style.left = position + 'px';
+            
+            if (position < screenWidth + 200) {{
+                requestAnimationFrame(moveCar);
+            }} else {{
+                car.remove();
+                
+                // Only reload if this is not a one-time test
+                if (!{str(one_time).lower()}) {{
+                    // Schedule next animation (using user-defined intervals)
+                    const minMs = {st.session_state.min_interval * 60 * 1000};
+                    const maxMs = {st.session_state.max_interval * 60 * 1000};
+                    const nextInterval = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+                    
+                    console.log("Next car in: " + (nextInterval/1000/60).toFixed(1) + " minutes");
+                    
+                    setTimeout(() => {{
+                        window.location.reload();
+                    }}, nextInterval);
+                }}
+            }}
+        }}
+        
+        // Start animation
+        requestAnimationFrame(moveCar);
+    </script>
+    """
+    
+    html(animation_code, height=0)
+
 def main():
     st.set_page_config(page_title="Luxury Car Motivator", layout="wide")
     
@@ -89,14 +139,25 @@ def main():
     min_interval = st.slider("Minimum interval (minutes):", 1, 60, 40)
     max_interval = st.slider("Maximum interval (minutes):", min_interval, 120, 60)
     
+    # Test and Start buttons in separate columns
+    col1, col2 = st.columns(2)
+    
+    # Test button
+    with col1:
+        if st.button("Test This Car"):
+            car_svg = CARS[selected_car]
+            show_car_animation(car_svg, one_time=True)
+            st.success(f"Testing {selected_car} animation. Is this motivating for you?")
+    
     # Start button
-    if st.button("Start Motivation"):
-        st.session_state.motivation_active = True
-        st.session_state.selected_car = selected_car
-        st.session_state.min_interval = min_interval
-        st.session_state.max_interval = max_interval
-        st.session_state.last_time = datetime.now().timestamp() - 9999  # Trigger first animation immediately
-        st.rerun()  # Changed from st.experimental_rerun()
+    with col2:
+        if st.button("Start Motivation"):
+            st.session_state.motivation_active = True
+            st.session_state.selected_car = selected_car
+            st.session_state.min_interval = min_interval
+            st.session_state.max_interval = max_interval
+            st.session_state.last_time = datetime.now().timestamp() - 9999  # Trigger first animation immediately
+            st.rerun()  # Changed from st.experimental_rerun()
     
     # Check if motivation is active
     if 'motivation_active' in st.session_state and st.session_state.motivation_active:
@@ -110,50 +171,7 @@ def main():
         if current_time >= st.session_state.next_animation_time:
             # Show car animation
             car_svg = CARS[st.session_state.selected_car]
-            
-            # Create animation with JavaScript
-            animation_code = f"""
-            <div id="car-container" style="position: fixed; top: {random.randint(20, 70)}%; left: -200px; z-index: 9999;">
-                <div style="width: 200px; height: 100px;">
-                    {car_svg}
-                </div>
-            </div>
-            
-            <script>
-                // Animate car across screen
-                const car = document.getElementById('car-container');
-                let position = -200;
-                const screenWidth = window.innerWidth;
-                
-                function moveCar() {{
-                    position += 5;
-                    car.style.left = position + 'px';
-                    
-                    if (position < screenWidth + 200) {{
-                        requestAnimationFrame(moveCar);
-                    }} else {{
-                        car.remove();
-                    }}
-                }}
-                
-                // Start animation
-                requestAnimationFrame(moveCar);
-                
-                // Schedule next animation (40-60 minutes)
-                const minMs = {st.session_state.min_interval * 60 * 1000};
-                const maxMs = {st.session_state.max_interval * 60 * 1000};
-                const nextInterval = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
-                
-                // For testing purposes, uncomment this to use shorter interval (5-10 seconds)
-                // const nextInterval = Math.floor(Math.random() * 5000) + 5000;
-                
-                setTimeout(() => {{
-                    window.location.reload();
-                }}, nextInterval);
-            </script>
-            """
-            
-            html(animation_code, height=0)
+            show_car_animation(car_svg)
             
             # Schedule next animation
             interval_seconds = random.randint(st.session_state.min_interval * 60, st.session_state.max_interval * 60)
@@ -171,8 +189,11 @@ def main():
             minutes = int(time_diff // 60)
             seconds = int(time_diff % 60)
             
-            st.write(f"Next car will appear in: {minutes} minutes and {seconds} seconds")
+            st.info(f"Next car will appear in: {minutes} minutes and {seconds} seconds")
             st.write("Keep this tab open to see your motivation!")
+            
+            # Add debug information to help with interval issues
+            st.write(f"Current settings: {st.session_state.min_interval}-{st.session_state.max_interval} minutes")
             
             # Auto-refresh the page every 30 seconds to update the countdown
             html("""
