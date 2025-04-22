@@ -1,4 +1,3 @@
-# app.py
 import streamlit as st
 import random
 import time
@@ -49,25 +48,33 @@ CARS = {
             <circle cx="140" cy="65" r="15" fill="#1e293b" stroke="#94a3b8" stroke-width="2"/>
             <path d="M80,25 L80,50 L120,50 L120,25" fill="#bfdbfe" stroke="#1e3a8a" stroke-width="2"/>
         </svg>
+    """,
+    "Aston Martin DBS": """
+        <svg viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg">
+            <path d="M35,50 L55,30 L145,30 L165,50 L155,65 L45,65 Z" fill="#064e3b"/>
+            <circle cx="60" cy="65" r="15" fill="#1e293b" stroke="#94a3b8" stroke-width="2"/>
+            <circle cx="140" cy="65" r="15" fill="#1e293b" stroke="#94a3b8" stroke-width="2"/>
+            <path d="M65,30 L75,40 L125,40 L135,30" fill="none" stroke="#f0fdfa" stroke-width="2"/>
+        </svg>
+    """,
+    "McLaren 720S": """
+        <svg viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg">
+            <path d="M40,50 L70,25 L130,25 L160,50 L150,65 L50,65 Z" fill="#f97316"/>
+            <circle cx="65" cy="65" r="15" fill="#1e293b" stroke="#94a3b8" stroke-width="2"/>
+            <circle cx="135" cy="65" r="15" fill="#1e293b" stroke="#94a3b8" stroke-width="2"/>
+            <path d="M75,25 L85,40 L115,40 L125,25" fill="none" stroke="#fff7ed" stroke-width="2"/>
+        </svg>
     """
 }
 
 def main():
     st.set_page_config(page_title="Luxury Car Motivator", layout="wide")
     
-    # Custom CSS to hide Streamlit elements and make background transparent
+    # Custom CSS to hide Streamlit elements when in animation mode
     st.markdown("""
         <style>
             #MainMenu {visibility: hidden;}
             footer {visibility: hidden;}
-            .stApp {
-                background: rgba(255, 255, 255, 0.0);
-            }
-            @media (prefers-color-scheme: dark) {
-                .stApp {
-                    background: rgba(0, 0, 0, 0.0);
-                }
-            }
         </style>
     """, unsafe_allow_html=True)
     
@@ -137,7 +144,7 @@ def main():
                 const maxMs = {st.session_state.max_interval * 60 * 1000};
                 const nextInterval = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
                 
-                // For demo purposes, use shorter interval (5-10 seconds)
+                // For testing purposes, uncomment this to use shorter interval (5-10 seconds)
                 // const nextInterval = Math.floor(Math.random() * 5000) + 5000;
                 
                 setTimeout(() => {{
