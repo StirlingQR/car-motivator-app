@@ -1,123 +1,180 @@
-# car_motivator_app.py
-import sys
+# app.py
+import streamlit as st
 import random
 import time
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QLabel, QComboBox, 
-                            QPushButton, QVBoxLayout, QWidget, QSystemTrayIcon, 
-                            QMenu, QAction)
-from PyQt5.QtCore import QTimer, QPropertyAnimation, QRect, Qt, QSize
-from PyQt5.QtGui import QIcon, QPixmap, QPainter
+from datetime import datetime
+from streamlit.components.v1 import html
 
-class CarMotivatorApp(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Luxury Car Motivator")
-        self.setGeometry(100, 100, 400, 300)
+# List of premium cars with embedded SVG graphics
+CARS = {
+    "Bentley Bentayga": """
+        <svg viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg">
+            <rect x="30" y="40" width="140" height="25" rx="10" fill="#0f172a"/>
+            <rect x="50" y="25" width="100" height="20" rx="5" fill="#0f172a"/>
+            <circle cx="60" cy="65" r="15" fill="#1e293b" stroke="#94a3b8" stroke-width="2"/>
+            <circle cx="140" cy="65" r="15" fill="#1e293b" stroke="#94a3b8" stroke-width="2"/>
+            <rect x="75" y="35" width="50" height="15" fill="#475569"/>
+        </svg>
+    """,
+    "Rolls-Royce Phantom": """
+        <svg viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg">
+            <rect x="25" y="40" width="150" height="25" rx="5" fill="#0c4a6e"/>
+            <rect x="45" y="20" width="110" height="25" rx="8" fill="#0c4a6e"/>
+            <circle cx="55" cy="65" r="15" fill="#0e7490" stroke="#e0f2fe" stroke-width="2"/>
+            <circle cx="145" cy="65" r="15" fill="#0e7490" stroke="#e0f2fe" stroke-width="2"/>
+            <rect x="70" y="30" width="60" height="15" fill="#0284c7"/>
+            <rect x="155" y="35" width="20" height="10" fill="#7dd3fc"/>
+        </svg>
+    """,
+    "Ferrari SF90 Stradale": """
+        <svg viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg">
+            <path d="M30,50 L50,30 L150,30 L170,50 L160,65 L40,65 Z" fill="#dc2626"/>
+            <circle cx="60" cy="65" r="15" fill="#1e293b" stroke="#94a3b8" stroke-width="2"/>
+            <circle cx="140" cy="65" r="15" fill="#1e293b" stroke="#94a3b8" stroke-width="2"/>
+            <path d="M60,30 L80,40 L120,40 L140,30" fill="none" stroke="#fef3c7" stroke-width="2"/>
+        </svg>
+    """,
+    "Lamborghini Revuelto": """
+        <svg viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg">
+            <path d="M40,50 L60,30 L140,30 L160,50 L150,65 L50,65 Z" fill="#eab308"/>
+            <circle cx="65" cy="65" r="15" fill="#1e293b" stroke="#94a3b8" stroke-width="2"/>
+            <circle cx="135" cy="65" r="15" fill="#1e293b" stroke="#94a3b8" stroke-width="2"/>
+            <path d="M70,30 L80,40 L120,40 L130,30" fill="none" stroke="#1e1b4b" stroke-width="3"/>
+        </svg>
+    """,
+    "Bugatti Chiron": """
+        <svg viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg">
+            <path d="M30,50 L60,25 L140,25 L170,50 L155,65 L45,65 Z" fill="#1e40af"/>
+            <circle cx="60" cy="65" r="15" fill="#1e293b" stroke="#94a3b8" stroke-width="2"/>
+            <circle cx="140" cy="65" r="15" fill="#1e293b" stroke="#94a3b8" stroke-width="2"/>
+            <path d="M80,25 L80,50 L120,50 L120,25" fill="#bfdbfe" stroke="#1e3a8a" stroke-width="2"/>
+        </svg>
+    """
+}
+
+def main():
+    st.set_page_config(page_title="Luxury Car Motivator", layout="wide")
+    
+    # Custom CSS to hide Streamlit elements and make background transparent
+    st.markdown("""
+        <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            .stApp {
+                background: rgba(255, 255, 255, 0.0);
+            }
+            @media (prefers-color-scheme: dark) {
+                .stApp {
+                    background: rgba(0, 0, 0, 0.0);
+                }
+            }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    # App title and description
+    st.title("🚗 Luxury Car Motivator")
+    st.write("This app will show your dream car driving across the screen every 40-60 minutes to keep you motivated!")
+    
+    # Car selection
+    selected_car = st.selectbox("Select your dream car:", list(CARS.keys()))
+    
+    # Interval selection (in minutes)
+    min_interval = st.slider("Minimum interval (minutes):", 1, 60, 40)
+    max_interval = st.slider("Maximum interval (minutes):", min_interval, 120, 60)
+    
+    # Start button
+    if st.button("Start Motivation"):
+        st.session_state.motivation_active = True
+        st.session_state.selected_car = selected_car
+        st.session_state.min_interval = min_interval
+        st.session_state.max_interval = max_interval
+        st.session_state.last_time = datetime.now().timestamp() - 9999  # Trigger first animation immediately
+        st.experimental_rerun()
+    
+    # Check if motivation is active
+    if 'motivation_active' in st.session_state and st.session_state.motivation_active:
+        current_time = datetime.now().timestamp()
         
-        # Define luxury cars
-        self.cars = {
-            "Bentley Bentayga": "bentley.svg",
-            "Rolls-Royce Phantom": "rolls.svg",
-            "Ferrari SF90 Stradale": "ferrari.svg",
-            "Lamborghini Revuelto": "lambo.svg",
-            "Porsche 911 GT3 RS": "porsche.svg",
-            "Aston Martin DBS": "aston.svg",
-            "McLaren 720S": "mclaren.svg",
-            "Bugatti Chiron": "bugatti.svg"
-        }
+        # If it's time for an animation
+        if 'next_animation_time' not in st.session_state:
+            # First run - schedule immediately
+            st.session_state.next_animation_time = current_time
         
-        # Create central widget and layout
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        layout = QVBoxLayout(central_widget)
+        if current_time >= st.session_state.next_animation_time:
+            # Show car animation
+            car_svg = CARS[st.session_state.selected_car]
+            
+            # Create animation with JavaScript
+            animation_code = f"""
+            <div id="car-container" style="position: fixed; top: {random.randint(20, 70)}%; left: -200px; z-index: 9999;">
+                <div style="width: 200px; height: 100px;">
+                    {car_svg}
+                </div>
+            </div>
+            
+            <script>
+                // Animate car across screen
+                const car = document.getElementById('car-container');
+                let position = -200;
+                const screenWidth = window.innerWidth;
+                
+                function moveCar() {{
+                    position += 5;
+                    car.style.left = position + 'px';
+                    
+                    if (position < screenWidth + 200) {{
+                        requestAnimationFrame(moveCar);
+                    }} else {{
+                        car.remove();
+                    }}
+                }}
+                
+                // Start animation
+                requestAnimationFrame(moveCar);
+                
+                // Schedule next animation (40-60 minutes)
+                const minMs = {st.session_state.min_interval * 60 * 1000};
+                const maxMs = {st.session_state.max_interval * 60 * 1000};
+                const nextInterval = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+                
+                // For demo purposes, use shorter interval (5-10 seconds)
+                // const nextInterval = Math.floor(Math.random() * 5000) + 5000;
+                
+                setTimeout(() => {{
+                    window.location.reload();
+                }}, nextInterval);
+            </script>
+            """
+            
+            html(animation_code, height=0)
+            
+            # Schedule next animation
+            interval_seconds = random.randint(st.session_state.min_interval * 60, st.session_state.max_interval * 60)
+            st.session_state.next_animation_time = current_time + interval_seconds
         
-        # Car selection dropdown
-        self.car_label = QLabel("Select Your Dream Car:")
-        layout.addWidget(self.car_label)
+        # Show stop button
+        if st.button("Stop Motivation"):
+            st.session_state.motivation_active = False
+            st.experimental_rerun()
         
-        self.car_combo = QComboBox()
-        self.car_combo.addItems(self.cars.keys())
-        layout.addWidget(self.car_combo)
-        
-        # Start button
-        self.start_button = QPushButton("Start Motivation")
-        self.start_button.clicked.connect(self.start_motivation)
-        layout.addWidget(self.start_button)
-        
-        # System tray setup
-        self.tray_icon = QSystemTrayIcon(QIcon("icon.png"), self)
-        tray_menu = QMenu()
-        show_action = QAction("Show", self)
-        quit_action = QAction("Exit", self)
-        show_action.triggered.connect(self.show)
-        quit_action.triggered.connect(self.close_app)
-        tray_menu.addAction(show_action)
-        tray_menu.addAction(quit_action)
-        self.tray_icon.setContextMenu(tray_menu)
-        self.tray_icon.show()
-        
-        # Animation timer
-        self.animation_timer = QTimer(self)
-        self.animation_timer.timeout.connect(self.show_car_animation)
-        
-        # Selected car
-        self.selected_car = None
-        
-    def start_motivation(self):
-        self.selected_car = self.car_combo.currentText()
-        self.hide()
-        # Schedule first animation with random interval (40-60 minutes)
-        interval = random.randint(40 * 60 * 1000, 60 * 60 * 1000)
-        self.animation_timer.start(interval)
-        
-    def show_car_animation(self):
-        # Create animation window
-        self.anim_window = QWidget(None, Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
-        self.anim_window.setAttribute(Qt.WA_TranslucentBackground)
-        
-        # Create car label
-        car_label = QLabel(self.anim_window)
-        car_path = self.cars[self.selected_car]
-        car_pixmap = QPixmap(car_path)
-        car_label.setPixmap(car_pixmap.scaled(200, 100, Qt.KeepAspectRatio))
-        car_label.setFixedSize(200, 100)
-        
-        # Set window size and position
-        screen_width = QApplication.desktop().screenGeometry().width()
-        screen_height = QApplication.desktop().screenGeometry().height()
-        y_position = random.randint(100, screen_height - 200)
-        self.anim_window.setGeometry(-200, y_position, 200, 100)
-        self.anim_window.show()
-        
-        # Animate car across screen
-        self.animation = QPropertyAnimation(self.anim_window, b"geometry")
-        self.animation.setDuration(8000)  # 8 seconds to cross screen
-        self.animation.setStartValue(QRect(-200, y_position, 200, 100))
-        self.animation.setEndValue(QRect(screen_width + 100, y_position, 200, 100))
-        self.animation.finished.connect(self.anim_window.close)
-        self.animation.finished.connect(self.schedule_next_animation)
-        self.animation.start()
-        
-    def schedule_next_animation(self):
-        # Schedule next animation with random interval (40-60 minutes)
-        interval = random.randint(40 * 60 * 1000, 60 * 60 * 1000)
-        self.animation_timer.start(interval)
-        
-    def close_app(self):
-        self.animation_timer.stop()
-        if hasattr(self, 'anim_window') and self.anim_window:
-            self.anim_window.close()
-        self.tray_icon.hide()
-        QApplication.quit()
-        
-    def closeEvent(self, event):
-        # Minimize to tray when user closes the window
-        event.ignore()
-        self.hide()
+        # Display status
+        if 'next_animation_time' in st.session_state:
+            next_time = datetime.fromtimestamp(st.session_state.next_animation_time)
+            time_diff = max(0, st.session_state.next_animation_time - current_time)
+            minutes = int(time_diff // 60)
+            seconds = int(time_diff % 60)
+            
+            st.write(f"Next car will appear in: {minutes} minutes and {seconds} seconds")
+            st.write("Keep this tab open to see your motivation!")
+            
+            # Auto-refresh the page every 30 seconds to update the countdown
+            html("""
+            <script>
+                setTimeout(function() {
+                    window.location.reload();
+                }, 30000);
+            </script>
+            """, height=0)
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    app.setQuitOnLastWindowClosed(False)  # Keep running when window is closed
-    window = CarMotivatorApp()
-    window.show()
-    sys.exit(app.exec_())
+    main()
