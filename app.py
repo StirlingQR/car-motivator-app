@@ -96,7 +96,7 @@ def main():
         st.session_state.min_interval = min_interval
         st.session_state.max_interval = max_interval
         st.session_state.last_time = datetime.now().timestamp() - 9999  # Trigger first animation immediately
-        st.experimental_rerun()
+        st.rerun()  # Changed from st.experimental_rerun()
     
     # Check if motivation is active
     if 'motivation_active' in st.session_state and st.session_state.motivation_active:
@@ -162,7 +162,7 @@ def main():
         # Show stop button
         if st.button("Stop Motivation"):
             st.session_state.motivation_active = False
-            st.experimental_rerun()
+            st.rerun()  # Changed from st.experimental_rerun()
         
         # Display status
         if 'next_animation_time' in st.session_state:
