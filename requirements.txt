@@ -1,3 +1,2 @@
-tkinter
-pillow
-pystray
+streamlit>=1.30.0
+PyQt5>=5.15.0
