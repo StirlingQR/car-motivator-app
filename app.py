@@ -1,104 +1,123 @@
-# car_motivator.py
-import tkinter as tk
-from tkinter import ttk
+# car_motivator_app.py
+import sys
 import random
-import os
-from PIL import Image, ImageTk
-from pystray import MenuItem as item
-import pystray
+import time
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QLabel, QComboBox, 
+                            QPushButton, QVBoxLayout, QWidget, QSystemTrayIcon, 
+                            QMenu, QAction)
+from PyQt5.QtCore import QTimer, QPropertyAnimation, QRect, Qt, QSize
+from PyQt5.QtGui import QIcon, QPixmap, QPainter
 
-class CarMotivatorApp:
+class CarMotivatorApp(QMainWindow):
     def __init__(self):
-        self.root = tk.Tk()
-        self.root.title("Executive Car Motivator")
-        self.root.geometry("400x300")
+        super().__init__()
+        self.setWindowTitle("Luxury Car Motivator")
+        self.setGeometry(100, 100, 400, 300)
         
-        # Car selection setup
+        # Define luxury cars
         self.cars = {
-            "Bentley Bentayga": "car1.png",
-            "Rolls-Royce Phantom": "car2.png",
-            "Ferrari SF90 Stradale": "car3.png",
-            "Porsche 911 GT3": "car4.png"
+            "Bentley Bentayga": "bentley.svg",
+            "Rolls-Royce Phantom": "rolls.svg",
+            "Ferrari SF90 Stradale": "ferrari.svg",
+            "Lamborghini Revuelto": "lambo.svg",
+            "Porsche 911 GT3 RS": "porsche.svg",
+            "Aston Martin DBS": "aston.svg",
+            "McLaren 720S": "mclaren.svg",
+            "Bugatti Chiron": "bugatti.svg"
         }
         
-        # Landing page
-        self.create_landing_page()
-        self.setup_system_tray()
+        # Create central widget and layout
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        layout = QVBoxLayout(central_widget)
         
-    def create_landing_page(self):
-        self.clear_window()
+        # Car selection dropdown
+        self.car_label = QLabel("Select Your Dream Car:")
+        layout.addWidget(self.car_label)
         
-        lbl = ttk.Label(self.root, text="Select Your Motivational Car", font=('Arial', 14))
-        lbl.pack(pady=20)
+        self.car_combo = QComboBox()
+        self.car_combo.addItems(self.cars.keys())
+        layout.addWidget(self.car_combo)
         
-        self.car_var = tk.StringVar()
-        car_dropdown = ttk.Combobox(self.root, textvariable=self.car_var, values=list(self.cars.keys()))
-        car_dropdown.pack(pady=10)
+        # Start button
+        self.start_button = QPushButton("Start Motivation")
+        self.start_button.clicked.connect(self.start_motivation)
+        layout.addWidget(self.start_button)
         
-        btn = ttk.Button(self.root, text="Start Motivation", command=self.start_animation)
-        btn.pack(pady=20)
+        # System tray setup
+        self.tray_icon = QSystemTrayIcon(QIcon("icon.png"), self)
+        tray_menu = QMenu()
+        show_action = QAction("Show", self)
+        quit_action = QAction("Exit", self)
+        show_action.triggered.connect(self.show)
+        quit_action.triggered.connect(self.close_app)
+        tray_menu.addAction(show_action)
+        tray_menu.addAction(quit_action)
+        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.show()
         
-    def start_animation(self):
-        self.selected_car = self.car_var.get()
-        self.root.withdraw()  # Hide main window
-        self.schedule_next_animation()
+        # Animation timer
+        self.animation_timer = QTimer(self)
+        self.animation_timer.timeout.connect(self.show_car_animation)
         
-    def schedule_next_animation(self):
-        interval = random.randint(2400, 3600)  # 40-60 minutes in seconds
-        self.root.after(interval * 1000, self.show_car_animation)
+        # Selected car
+        self.selected_car = None
+        
+    def start_motivation(self):
+        self.selected_car = self.car_combo.currentText()
+        self.hide()
+        # Schedule first animation with random interval (40-60 minutes)
+        interval = random.randint(40 * 60 * 1000, 60 * 60 * 1000)
+        self.animation_timer.start(interval)
         
     def show_car_animation(self):
-        popup = tk.Toplevel()
-        popup.attributes("-topmost", True)
-        popup.overrideredirect(True)
+        # Create animation window
+        self.anim_window = QWidget(None, Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
+        self.anim_window.setAttribute(Qt.WA_TranslucentBackground)
         
-        # Load car image (replace with your PNG files)
-        img_path = self.cars[self.selected_car]
-        img = Image.open(img_path)
-        photo = ImageTk.PhotoImage(img)
+        # Create car label
+        car_label = QLabel(self.anim_window)
+        car_path = self.cars[self.selected_car]
+        car_pixmap = QPixmap(car_path)
+        car_label.setPixmap(car_pixmap.scaled(200, 100, Qt.KeepAspectRatio))
+        car_label.setFixedSize(200, 100)
         
-        # Set up animation
-        screen_width = self.root.winfo_screenwidth()
-        label = tk.Label(popup, image=photo)
-        label.image = photo
-        label.pack()
+        # Set window size and position
+        screen_width = QApplication.desktop().screenGeometry().width()
+        screen_height = QApplication.desktop().screenGeometry().height()
+        y_position = random.randint(100, screen_height - 200)
+        self.anim_window.setGeometry(-200, y_position, 200, 100)
+        self.anim_window.show()
         
-        # Animation movement
-        x_position = -img.width
-        def move():
-            nonlocal x_position
-            x_position += 5
-            popup.geometry(f"+{x_position}+{self.root.winfo_screenheight()//2}")
-            if x_position < screen_width:
-                popup.after(10, move)
-            else:
-                popup.destroy()
-                self.schedule_next_animation()
-                
-        popup.geometry(f"+{x_position}+{self.root.winfo_screenheight()//2}")
-        move()
+        # Animate car across screen
+        self.animation = QPropertyAnimation(self.anim_window, b"geometry")
+        self.animation.setDuration(8000)  # 8 seconds to cross screen
+        self.animation.setStartValue(QRect(-200, y_position, 200, 100))
+        self.animation.setEndValue(QRect(screen_width + 100, y_position, 200, 100))
+        self.animation.finished.connect(self.anim_window.close)
+        self.animation.finished.connect(self.schedule_next_animation)
+        self.animation.start()
         
-    def setup_system_tray(self):
-        image = Image.open("icon.png")  # 16x16 pixel icon
-        menu = (item('Show', self.restore_window), item('Exit', self.exit_app))
-        self.tray_icon = pystray.Icon("car_motivator", image, "Car Motivator", menu)
+    def schedule_next_animation(self):
+        # Schedule next animation with random interval (40-60 minutes)
+        interval = random.randint(40 * 60 * 1000, 60 * 60 * 1000)
+        self.animation_timer.start(interval)
         
-    def restore_window(self):
-        self.root.deiconify()
+    def close_app(self):
+        self.animation_timer.stop()
+        if hasattr(self, 'anim_window') and self.anim_window:
+            self.anim_window.close()
+        self.tray_icon.hide()
+        QApplication.quit()
         
-    def exit_app(self):
-        self.tray_icon.stop()
-        self.root.destroy()
-        
-    def clear_window(self):
-        for widget in self.root.winfo_children():
-            widget.destroy()
-            
-    def run(self):
-        self.root.protocol("WM_DELETE_WINDOW", self.root.withdraw)
-        self.tray_icon.run_detached()
-        self.root.mainloop()
+    def closeEvent(self, event):
+        # Minimize to tray when user closes the window
+        event.ignore()
+        self.hide()
 
 if __name__ == "__main__":
-    app = CarMotivatorApp()
-    app.run()
+    app = QApplication(sys.argv)
+    app.setQuitOnLastWindowClosed(False)  # Keep running when window is closed
+    window = CarMotivatorApp()
+    window.show()
+    sys.exit(app.exec_())
